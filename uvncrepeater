@@ -1,0 +1,99 @@
+#!/bin/sh
+#######
+#Filename: uvncrepeater
+#Version: v1.02
+#Location: /etc/init.d
+#Author: Fafakos Panayiotis - Greece
+#Licence: GNU-GPL
+#######
+# Version info
+#-------
+# v1.02 - 20101122 - Corrected restart option
+#-------
+# v1.01 - 20101015 - Updated release for CentOS
+# - Added small corrections to make it work under CentOS 
+# (update-rc.d and start-stop-daemon do not exist in CentOS)
+#-------
+# v1.00 - Initial release for Debian
+#######
+### BEGIN INIT INFO
+# Provides:          uvncrepeater
+# Required-Start:    $network $syslog
+# Required-Stop:     
+# Default-Start:     2 3 5
+# Default-Stop:      0 6
+# Short-Description: Start ultravnc repeater daemon at boot time
+# Description:       Enable ultravnc repeater service.
+### END INIT INFO
+
+
+PATH=/sbin:/bin
+SCRIPTNAME=$0
+UVNCREPPID=/var/run/uvncrepeater.pid
+UVNCREPLOG=/var/log/uvncrepeater.log
+UVNCREPRUN=/usr/sbin/uvncrepeater-log
+UVNCREPSVC=/usr/sbin/uvncrepeatersvc
+UVNCREPINI=/etc/uvnc/uvncrepeater.ini
+
+SYSTYPE=Debian 
+type start-stop-daemon
+if test $? -gt 0 ; then
+	echo This is not a Debian system, or start-stop-daemon has not been installed.
+	SYSTYPE=other
+	fi
+
+#if service file does not exist then exit the script
+if test ! -x $UVNCREPSVC ; then
+    echo $UVNCREPSVC file was not found.
+    echo Exiting...
+    exit 2
+    fi
+
+#Create the file to start the service if it does not exist
+if test ! -x $UVNCREPRUN ; then
+    echo '#!/bin/sh' > $UVNCREPRUN
+    echo 'exec' $UVNCREPSVC $UVNCREPINI '2>>' $UVNCREPLOG  >> $UVNCREPRUN
+    chmod +x $UVNCREPRUN
+    fi
+
+case "$1" in
+start)
+  echo -n "Running UltraVNC Repeater..."
+  if [ "$SYSTYPE" == "Debian" ]; then
+  		start-stop-daemon --start -b -m -p $UVNCREPPID --exec $UVNCREPRUN -- $UVNCREPLOG
+	else
+  		$UVNCREPRUN -- $UVNCREPLOG &
+		echo $! > $UVNCREPPID
+	fi
+  echo "."
+  ;;
+stop)
+  echo  "Stopping UltraVNC Repeater..."
+  if [ "$SYSTYPE" == "Debian" ]; then
+  		start-stop-daemon --stop -p $UVNCREPPID
+	else
+		UVNCPID=`cat $UVNCREPPID`
+		echo $UVNCREPRUN should be running at $UVNCPID
+		if [ -e /proc/$UVNCPID -a /proc/$UVNCPID/exe ]; then
+			echo Seems that this process exists. Trying to stop it...
+  			kill -15 $UVNCPID
+			rm -f $UVNCREPPPID
+			fi
+
+	fi
+  rm $UVNCREPPID
+  ;;
+restart)
+	"$SCRIPTNAME" stop && "$SCRIPTNAME" start
+  ;;
+force-reload)
+	"$SCRIPTNAME" stop && "$SCRIPTNAME" start
+  ;;
+*)
+  echo "Usage: "$BASENAME" {start|stop|restart|force-reload|status}"
+  exit 1
+esac
+
+
+exit 0
+
