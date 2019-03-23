@@ -80,6 +80,8 @@
 //Use safer openbsd stringfuncs: strlcpy, strlcat
 #include "openbsd_stringfuncs.h"
 
+char DEFAULT_INI_FILE_PATH_AND_NAME[] = "/etc/uvnc/uvncrepeater.ini";
+
 typedef char rfbProtocolVersionMsg[SIZE_RFBPROTOCOLVERSIONMSG+1]; /* allow extra byte for null */
 
 typedef struct _repeaterInfo {
@@ -1949,6 +1951,7 @@ static void dropRootPrivileges()
     struct passwd *pw;
     
     pw = getpwnam(runAsUser);
+    debug(LEVEL_1, "Run As User: %s\n", runAsUser);
 
     if (pw != NULL) {
         if (0 != setgid(pw -> pw_gid)) {
@@ -1972,8 +1975,9 @@ static void dropRootPrivileges()
         else
             debug(LEVEL_1, "dropRootPrivileges(): privileges successfully dropped, now running as user %s\n", runAsUser);
     }
-    else
-        fatal("dropRootPrivileges(): getpwnam() failed\n");    
+    else {
+        fatal("dropRootPrivileges(): getpwnam() failed, please open the file (%s) and check the 'runasuser' field\n", DEFAULT_INI_FILE_PATH_AND_NAME); 
+    }
 }
 
 
@@ -2002,7 +2006,8 @@ int main(int argc, char **argv)
     fprintf(stderr, "UltraVnc Linux Repeater version %s\n", REPEATER_VERSION);
     
     //Read parameters from ini file
-    strlcpy(tmpBuf, (argc >= 2) ? argv[1] : defaultIniFilePathAndName, MAX_PATH);
+    // strlcpy(tmpBuf, (argc >= 2) ? argv[1] : defaultIniFilePathAndName, MAX_PATH);
+    strlcpy(tmpBuf, (argc >= 2) ? argv[1] : DEFAULT_INI_FILE_PATH_AND_NAME, MAX_PATH);
     if (false == readIniFile(tmpBuf)) {
         debug(LEVEL_1, "main(): ini file (%s) read error, using defaults\n", tmpBuf);
     }
